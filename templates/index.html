@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<div class="image-field" id="image">
+    <div class="image" style="background: url({{ image }}); background-position: center; background-repeat: no-repeat; background-size: cover;"></div>
+</div>
+<div class="pallette">
+    <div class="color" style="background: rgb{{ col[0] }}; color: rgb{{ t_col[0] }}; box-shadow: 0 0 0 5px #fff;" onclick="change_color(this)">1</div>
+    <div class="color" style="background: rgb{{ col[1] }}; color: rgb{{ t_col[1] }};" onclick="change_color(this)">2</div>
+    <div class="color" style="background: rgb{{ col[2] }}; color: rgb{{ t_col[2] }};" onclick="change_color(this)">3</div>
+    <div class="color" style="background: rgb{{ col[3] }}; color: rgb{{ t_col[3] }};" onclick="change_color(this)">4</div>
+    <div class="color" style="background: rgb{{ col[4] }}; color: rgb{{ t_col[4] }};" onclick="change_color(this)">5</div>
+    <div class="color" style="background: rgb{{ col[5] }}; color: rgb{{ t_col[5] }};" onclick="change_color(this)">6</div>
+    <div class="color" style="background: rgb{{ col[6] }}; color: rgb{{ t_col[6] }};" onclick="change_color(this)">7</div>
+    <a href="{{ image }}" download target="_blank"><button class="download-btn btn btn-light btn-lg col-6" type="button">Скачать</button></a>
+</div>
+{% endblock %}
