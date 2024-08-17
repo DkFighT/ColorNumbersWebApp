@@ -2,7 +2,7 @@
 
 {% block body %}
 <div class="image-field" id="image">
-    <div class="image" style="background: url({{ image }}); background-position: center; background-repeat: no-repeat; background-size: cover;"></div>
+    <div class="image" id="img" style="background: url('data:image/jpeg;base64,{{ image[0] }}'); background-position: center; background-repeat: no-repeat; background-size: cover;"></div>
 </div>
 <div class="pallette">
     <div class="color" style="background: rgb{{ col[0] }}; color: rgb{{ t_col[0] }}; box-shadow: 0 0 0 5px #fff;" onclick="change_color(this)">1</div>
@@ -12,6 +12,84 @@
     <div class="color" style="background: rgb{{ col[4] }}; color: rgb{{ t_col[4] }};" onclick="change_color(this)">5</div>
     <div class="color" style="background: rgb{{ col[5] }}; color: rgb{{ t_col[5] }};" onclick="change_color(this)">6</div>
     <div class="color" style="background: rgb{{ col[6] }}; color: rgb{{ t_col[6] }};" onclick="change_color(this)">7</div>
-    <a href="{{ image }}" download target="_blank"><button class="download-btn btn btn-light btn-lg col-6" type="button">Скачать</button></a>
+    <div class="color" style="background: rgb{{ col[6] }}; color: rgb{{ t_col[7] }};" onclick="change_color(this)">8</div>
+    <div class="color" style="background: rgb{{ col[6] }}; color: rgb{{ t_col[8] }};" onclick="change_color(this)">9</div>
+    <a href="{{ href_img }}" download target="_blank"><button class="download-btn btn btn-light btn-lg col-6" type="button">Скачать</button></a>
+    <script>
+        let imagess = {{ image|safe }}
+        let counter = 0
+        function check_tile(el){
+            if (default_color == el.textContent && el.style.color != rgb_t){
+                el.style.background = rgb_b
+                el.style.zIndex = -1
+                el.style.color = rgb_t
+                all_tiles += 1
+                clicked_tiles[parseInt(el.textContent, 10) - 1] += 1
+            }
+            // let tiles = document.getElementsByClassName('tile')
+            let color_palletee = document.getElementsByClassName('color')
+            for (let i = 0; i < color_palletee.length; i++){
+                if (clicked_tiles[i] == count_tiles[i] && el.textContent == i+1 && el.style.background == rgb_b){
+                    // for(let j = 0; j < 400; j++){
+                    //     if (tiles[j].textContent == el.textContent)
+                    //     {
+                    //         tiles[j].style.transform = 'scale(5)'
+                    //         tiles[j].style.opacity = 0
+                    //     } 
+                    // }
+                    if (color_palletee[i].textContent == el.textContent){
+                        color_palletee[i].style.display = 'none'
+                        counter++
+                        if (counter == 9){
+                            end_img()
+                        }
+                        else{
+                           test(el) 
+                        }
+                        
+                        // let img = document.getElementById('img')
+                        // img.style.background = `url('data:image/jpeg;base64,${imagess[i+1]}')`
+                        // img.style.backgroundPosition = 'center'
+                        // img.style.backgroundRepeat = 'no-repeat'
+                        // img.style.backgroundSize = 'cover'
+                    }
+                }
+            }
+            if (all_tiles == num_tiles[0] * num_tiles[1]){
+                document.getElementsByClassName('download-btn')[0].style.display = 'block'
+            }
+        }
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        function test(el){
+            let dict = {
+                'color': el.style.background,
+                'image': document.getElementById('img').style.background
+            }
+
+            fetch('/getimg', {
+                method: 'POST',
+                headers: {'content-type': 'application/json'},
+                body: JSON.stringify(dict)
+            }).then(response => response.json()).then((data) => {
+                let img = document.getElementById('img')
+                img.style.background = `url('data:image/jpeg;base64,${data['image']}')`
+                img.style.backgroundPosition = 'center'
+                img.style.backgroundRepeat = 'no-repeat'
+                img.style.backgroundSize = 'cover'
+            })
+        }
+
+        function end_img(){
+            fetch('/getlast').then(response => response.json()).then(data => {
+                let img = document.getElementById('img')
+                img.style.background = `url('data:image/jpeg;base64,${data['image']}')`
+                img.style.backgroundPosition = 'center'
+                img.style.backgroundRepeat = 'no-repeat'
+                img.style.backgroundSize = 'cover'
+            })
+        }
+    </script>
 </div>
 {% endblock %}

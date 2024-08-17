@@ -1,7 +1,10 @@
-from flask import Flask, render_template, url_for, request, redirect
+from flask import Flask, render_template, url_for, request, jsonify
 import colorgram
 import requests
 import random
+from PIL import Image, ImageFilter
+import base64
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -36,17 +39,105 @@ images = ['https://i.pinimg.com/736x/91/f5/ec/91f5ec83f65e3840aa4384ac0121fa33.j
           'https://i.pinimg.com/564x/af/70/c0/af70c09f1669b259e42963d9bea77720.jpg',
           'https://i.pinimg.com/564x/a7/ac/d7/a7acd7ab0c758903d433f2b5f786580d.jpg']
 
+
+def image_base64(im):
+    with BytesIO() as buffer:
+        buffer.truncate(0)
+        im.save(buffer, 'jpeg')
+        return base64.b64encode(buffer.getvalue()).decode()
+
+def check(color, orig_col):
+    count = 0
+    for i in range(3):
+        if int(color[i]) - 30 <= orig_col[i] <= int(color[i]) + 30:
+            count += 1
+    if count == 3:
+        return True
+    else:
+        return False
+
+def convert_image(threshold, mask):
+    th_im = mask.point(lambda x: 255 if x > threshold else 0)
+    filter = th_im.filter(ImageFilter.CONTOUR)
+    return filter
+
+def create_images():
+    global img, colors, arr, im
+    arr = []
+    im = Image.open(requests.get(img, stream=True).raw)
+    scale_factor = 0.5
+    im = im.resize((int(im.size[0] * scale_factor), int(im.size[1] * scale_factor)))
+    colors = colorgram.extract(im, 9)
+    t_im = im.convert("L")
+    l_im = im.convert("L")
+    thresholds = [10, 70, 140, 200]
+    l_im = (l_im.point(lambda x: 255 if x > thresholds[0] else 0)).filter(ImageFilter.CONTOUR)
+    for i in thresholds:
+        edit_img = convert_image(i, t_im)
+        l_im.paste(edit_img, (0, 0), edit_img.point(lambda x: 0 if x == 255 else 255))
+    l_im = l_im.convert('RGB')
+    arr.append(image_base64(l_im))
+    # width, height = l_im.size
+    # arr.append(image_base64(l_im))
+    # mask = Image.new("L", (width, height), 0)
+    # for c in range(len(colors)):
+    #     col = (colors[c].rgb.r, colors[c].rgb.g, colors[c].rgb.b)
+    #     for x in range(width):
+    #         for y in range(height):
+    #             if check(col, im.getpixel((x, y))):
+    #                 mask.putpixel((x, y), 255)
+
+    #     l_im.paste(im, (0, 0), mask)
+    #     arr.append(image_base64(l_im))
+    # arr = arr[:-1]
+    # arr.append(image_base64(im))
+
+
+def create_next_image(color, img, orig_img):
+    img = img.convert('RGB')
+    width, height = img.size
+    # arr.append(image_base64(l_im))
+    mask = Image.new("L", (width, height), 0)
+    for x in range(width):
+        for y in range(height):
+            if check(color, orig_img.getpixel((x, y))):
+                mask.putpixel((x, y), 255)
+
+    img.paste(orig_img, (0, 0), mask)
+    return img
+
+@app.route('/getimg', methods=['GET', 'POST'])
+def get_img():
+    global im
+    data = request.get_json()
+    image = data['image'].split('"')[1].split(',')[1]
+    msg = base64.b64decode(image)
+    buf = BytesIO(msg)
+    img = Image.open(buf)
+    color = tuple(data['color'].split('(')[1][:-1].split(','))
+    new_img = image_base64(create_next_image(color, img, im))
+    res = jsonify({'image': f'{new_img}'})
+    return res
+
+@app.route('/getlast', methods=['GET'])
+def get_last():
+    global im
+    new_img = image_base64(im)
+    res = jsonify({'image': new_img})
+    return res
+
 @app.route('/', methods=['POST', 'GET'])
 def index():
+    global img, colors, arr
     img = random.choice(images)
-    print(img)
-    colors = colorgram.extract(requests.get(img, stream=True).raw, 7)
+    create_images()
     col = []
     t_col = []
     for i in range(len(colors)):
         col.append((colors[i].rgb.r, colors[i].rgb.g, colors[i].rgb.b))
         t_col.append((255 - colors[i].rgb.r, 255 - colors[i].rgb.g, 255 - colors[i].rgb.b))
-    return render_template('index.html', image=img, col=col, t_col=t_col)
+    
+    return render_template('index.html', image=arr, col=col, t_col=t_col, href_img = img)
 
 def main():
     app.run(debug=True)
